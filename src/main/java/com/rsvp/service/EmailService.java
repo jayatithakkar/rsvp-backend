@@ -17,38 +17,41 @@ public class EmailService {
     private JavaMailSender mailSender;
 
     public void sendConfirmation(String toEmail, List<String> guests) {
-
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
         message.setSubject("RSVP Confirmation 💜");
 
+        String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
+
         message.setText(
                 "Thank you for your RSVP!\n\nGuests:\n" +
-                        String.join(", ", guests) +
+                        guestList +
                         "\n\nWe look forward to celebrating with you!"
         );
 
         mailSender.send(message);
     }
 
-    // Inside your EmailService.java
+    public void sendEventReminder(String toEmail, List<String> guests) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Reminder: Krina's Baby Shower is Tomorrow!");
 
-    public void sendEventReminder(String toEmail, String guestNames) {
-        String subject = "Reminder: Krina's Baby Shower is Tomorrow!";
+        String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
 
         String body = String.format(
-                "Hi %s,\n\n" +
+                "Hi there,\n\n" +
                         "We are so excited to celebrate with you tomorrow! This is a quick reminder with the details for Krina's baby shower:\n\n" +
                         "📅 Date: Tomorrow, May 31, 2026\n" +
                         "⏰ Time: 9:00 AM (Followed by lunch)\n" +
                         "📍 Location: Grand Empire Banquet And Convention Centre\n" +
                         "🗺️ Address: 100 Nexus Ave, Brampton, ON L6P 3R6\n\n" +
+                        "Registered Guests: %s\n\n" +
                         "See you there!",
-                guestNames
+                guestList
         );
 
-        // Your existing logic to construct and send the email goes here
-        // e.g., SimpleMailMessage message = new SimpleMailMessage();
-        // message.setTo(toEmail); ... etc.
+        message.setText(body);
+        mailSender.send(message); // 👈 This was missing before!
     }
 }
