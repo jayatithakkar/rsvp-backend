@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Copy the Firebase JSON from the build stage into the final image
-COPY --from=build /etc/secrets/firebase-service-account.json /app/firebase-service-account.json
+COPY --from=build /app/firebase-service-account.json /app/firebase-service-account.json
 
 EXPOSE 8080
 
