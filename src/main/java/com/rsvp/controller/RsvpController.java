@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @RestController
 @RequestMapping("/api/rsvp")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
+@CrossOrigin(originPatterns = "https://krineel-babyshower.web.app", allowCredentials = "true")
 public class RsvpController {
 
     @Autowired
