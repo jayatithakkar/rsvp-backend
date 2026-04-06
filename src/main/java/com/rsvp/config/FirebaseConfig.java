@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
 
 /**
  * @author Jayati Thakkar
@@ -18,8 +19,8 @@ public class FirebaseConfig {
     @PostConstruct
     public void init() {
         try {
-            FileInputStream serviceAccount =
-                    new FileInputStream("firebase-service-account.json");
+            // Reading directly from the physical file
+            InputStream serviceAccount = new FileInputStream("app/firebase-service-account.json");
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -27,9 +28,11 @@ public class FirebaseConfig {
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
+                System.out.println("✅ Firebase initialized successfully from local file!");
             }
 
         } catch (Exception e) {
+            System.err.println("❌ Firebase Init Error: Could not find firebase-service-account.json");
             e.printStackTrace();
         }
     }
