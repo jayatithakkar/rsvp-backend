@@ -19,8 +19,21 @@ public class FirebaseConfig {
     @PostConstruct
     public void init() {
         try {
-            // Reading directly from the physical file
-            InputStream serviceAccount = new FileInputStream("app/firebase-service-account.json");
+            // 1. Check Render's specific Secret File path first
+            File file = new File("/etc/secrets/firebase-service-account.json");
+
+            // 2. If it doesn't exist there, look in the current working directory (for local testing)
+            if (!file.exists()) {
+                file = new File("firebase-service-account.json");
+            }
+
+            if (!file.exists()) {
+                throw new FileNotFoundException("Firebase config not found at /etc/secrets/ or local root");
+            }
+
+            System.out.println("✅ Loading Firebase config from: " + file.getAbsolutePath());
+
+            InputStream serviceAccount = new FileInputStream(file);
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -28,11 +41,11 @@ public class FirebaseConfig {
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("✅ Firebase initialized successfully from local file!");
+                System.out.println("✅ Firebase initialized successfully!");
             }
-
         } catch (Exception e) {
-            System.err.println("❌ Firebase Init Error: Could not find firebase-service-account.json");
+            System.err.println("❌ Firebase Init Error: " + e.getMessage());
+            // Do not let the app crash, but log the full error
             e.printStackTrace();
         }
     }
