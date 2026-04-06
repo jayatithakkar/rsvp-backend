@@ -6,6 +6,7 @@ import com.google.firebase.cloud.FirestoreClient;
 import com.rsvp.model.Rsvp;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -18,21 +19,31 @@ public class RsvpService {
     private static final String COLLECTION = "rsvps";
 
     public String saveRsvp(Rsvp rsvp) throws ExecutionException, InterruptedException {
-
         Firestore db = FirestoreClient.getFirestore();
+        String documentId;
 
-        // 1. Use the email (lowercased) as the guaranteed unique Document ID
-        String documentId = rsvp.getEmail().toLowerCase();
+        // If they have an email (Yes RSVP), use it as the ID to prevent duplicates
+        if (rsvp.getEmail() != null && !rsvp.getEmail().trim().isEmpty()) {
+            documentId = rsvp.getEmail().toLowerCase();
+        } else {
+            // If they said "No" (No email), generate a random ID for them
+            documentId = UUID.randomUUID().toString();
+        }
+
         DocumentReference docRef = db.collection(COLLECTION).document(documentId);
-
         rsvp.setId(documentId);
 
-        // 2. Use .create() instead of .set().
-        // If a document with this email already exists, .create() will throw an exception.
-        ApiFuture<WriteResult> result = docRef.create(rsvp);
-
-        // 3. We MUST call .get() to wait for Firebase to confirm the write succeeded
-        result.get();
+        try {
+            // Use .create() to fail if the email already exists
+            ApiFuture<WriteResult> result = docRef.create(rsvp);
+            result.get(); // Wait for confirmation
+        } catch (ExecutionException e) {
+            // Translate the Firebase error into our Custom error for the Controller
+            if (e.getMessage() != null && e.getMessage().contains("ALREADY_EXISTS")) {
+                throw new IllegalStateException("EMAIL_ALREADY_EXISTS");
+            }
+            throw e;
+        }
 
         return documentId;
     }
