@@ -66,6 +66,4 @@ public class Rsvp {
     private String email;        // For people attending
     private Integer guestCount;  // Use Integer so it can be safely null
     private List<String> guestNames;
-
-    public Rsvp() {}
 }

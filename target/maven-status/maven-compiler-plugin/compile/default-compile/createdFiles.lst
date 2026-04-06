@@ -1,6 +1,0 @@
-com/rsvp/model/Rsvp.class
-com/rsvp/RsvpMainApplication.class
-com/rsvp/service/RsvpService.class
-com/rsvp/config/FirebaseConfig.class
-com/rsvp/controller/RsvpController.class
-com/rsvp/service/EmailService.class
