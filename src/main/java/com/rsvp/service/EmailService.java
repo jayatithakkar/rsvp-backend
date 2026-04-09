@@ -27,8 +27,18 @@ public class EmailService {
     public void sendConfirmation(String toEmail, List<String> guests) {
         String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
         String subject = "RSVP Confirmation 💜";
-        String body = "Thank you for your RSVP!\n\nGuests:\n" + guestList + "\n\nWe look forward to celebrating with you!";
-
+//        String body = "Thank you for your RSVP!\n\nGuests:\n" + guestList + "\n\nWe look forward to celebrating with you!";
+        String body = String.format(
+                "Hi there,\n\n" +
+                        "Thank you for your RSVP! We are so excited to celebrating with you!\n\n" +
+                        "📅 Date: Sunday, May 31, 2026\n" +
+                        "⏰ Time: 9:00 AM (Followed by lunch)\n" +
+                        "📍 Location: Grand Empire Banquet And Convention Centre\n" +
+                        "🗺️ Address: 100 Nexus Ave, Brampton, ON L6P 3R6\n\n" +
+                        "Registered Guests: %s\n\n" +
+                        "See you there!\n\nGuestlist : ",
+                guestList
+        );
         sendEmailViaBrevo(toEmail, subject, body);
     }
 
