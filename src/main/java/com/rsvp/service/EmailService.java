@@ -1,41 +1,28 @@
 package com.rsvp.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import sendinblue.ApiClient;
-import sendinblue.Configuration;
-import sendinblue.auth.ApiKeyAuth;
-import sibApi.TransactionalEmailsApi;
-import sibModel.SendSmtpEmail;
-import sibModel.SendSmtpEmailSender;
-import sibModel.SendSmtpEmailTo;
 
-import jakarta.annotation.PostConstruct;
-import java.util.Collections;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Jayati Thakkar
- * @version 2.0 (Updated to use Brevo API)
+ * @version 3.0 (Native Java HTTP Client - No SDK required!)
  */
 @Service
 public class EmailService {
 
-    // Pulls the API key from your environment variables
-    @Value("${brevo.api.key}")
+    @Value("${brevo.api.key:}")
     private String apiKey;
 
-    // The email address you verified in your Brevo account
-    @Value("${brevo.sender.email}")
+    @Value("${brevo.sender.email:}")
     private String senderEmail;
-
-    @PostConstruct
-    public void init() {
-        // This connects your app to Brevo when Spring Boot starts up
-        ApiClient defaultClient = Configuration.getDefaultApiClient();
-        ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
-        apiKeyAuth.setApiKey(apiKey);
-    }
 
     public void sendConfirmation(String toEmail, List<String> guests) {
         String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
@@ -64,33 +51,41 @@ public class EmailService {
         sendEmailViaBrevo(toEmail, subject, body);
     }
 
-    // --- HELPER METHOD TO HANDLE THE API CALL ---
+    // --- NATIVE HTTP REQUEST ---
     private void sendEmailViaBrevo(String toEmail, String subject, String textContent) {
         try {
-            TransactionalEmailsApi apiInstance = new TransactionalEmailsApi();
-            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+            // 1. Create the JSON payload safely using Spring's built-in Jackson tool
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> payload = Map.of(
+                    "sender", Map.of("email", senderEmail, "name", "Krina's Baby Shower"),
+                    "to", List.of(Map.of("email", toEmail)),
+                    "subject", subject,
+                    "textContent", textContent
+            );
+            String jsonPayload = mapper.writeValueAsString(payload);
 
-            // Set who is sending it
-            SendSmtpEmailSender sender = new SendSmtpEmailSender();
-            sender.setEmail(senderEmail);
-            sender.setName("Krina's Baby Shower");
-            sendSmtpEmail.setSender(sender);
+            // 2. Build the HTTP POST request to Brevo
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("accept", "application/json")
+                    .header("api-key", apiKey)
+                    .header("content-type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
 
-            // Set who is receiving it
-            SendSmtpEmailTo to = new SendSmtpEmailTo();
-            to.setEmail(toEmail);
-            sendSmtpEmail.setTo(Collections.singletonList(to));
+            // 3. Send it using Java 11+ native HttpClient
+            HttpResponse<String> response = HttpClient.newHttpClient()
+                    .send(request, HttpResponse.BodyHandlers.ofString());
 
-            // Set content
-            sendSmtpEmail.setSubject(subject);
-            sendSmtpEmail.setTextContent(textContent); // We use TextContent to match your original formatting
-
-            // Send the email
-            apiInstance.sendTransacEmail(sendSmtpEmail);
-            System.out.println("✅ Email sent successfully via Brevo to: " + toEmail);
+            // 4. Check the results
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                System.out.println("✅ Email sent successfully via Native API to: " + toEmail);
+            } else {
+                System.err.println("❌ Brevo API Error: " + response.body());
+            }
 
         } catch (Exception e) {
-            System.err.println("❌ Failed to send email via Brevo to " + toEmail + ": " + e.getMessage());
+            System.err.println("❌ Failed to send email to " + toEmail + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
