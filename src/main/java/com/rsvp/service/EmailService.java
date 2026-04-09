@@ -1,43 +1,53 @@
 package com.rsvp.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import sendinblue.ApiClient;
+import sendinblue.Configuration;
+import sendinblue.auth.ApiKeyAuth;
+import sibApi.TransactionalEmailsApi;
+import sibModel.SendSmtpEmail;
+import sibModel.SendSmtpEmailSender;
+import sibModel.SendSmtpEmailTo;
+
+import jakarta.annotation.PostConstruct;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * @author Jayati Thakkar
- * @version 1.0
+ * @version 2.0 (Updated to use Brevo API)
  */
 @Service
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    // Pulls the API key from your environment variables
+    @Value("${brevo.api.key}")
+    private String apiKey;
+
+    // The email address you verified in your Brevo account
+    @Value("${brevo.sender.email}")
+    private String senderEmail;
+
+    @PostConstruct
+    public void init() {
+        // This connects your app to Brevo when Spring Boot starts up
+        ApiClient defaultClient = Configuration.getDefaultApiClient();
+        ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
+        apiKeyAuth.setApiKey(apiKey);
+    }
 
     public void sendConfirmation(String toEmail, List<String> guests) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("RSVP Confirmation 💜");
-
         String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
+        String subject = "RSVP Confirmation 💜";
+        String body = "Thank you for your RSVP!\n\nGuests:\n" + guestList + "\n\nWe look forward to celebrating with you!";
 
-        message.setText(
-                "Thank you for your RSVP!\n\nGuests:\n" +
-                        guestList +
-                        "\n\nWe look forward to celebrating with you!"
-        );
-
-        mailSender.send(message);
+        sendEmailViaBrevo(toEmail, subject, body);
     }
 
     public void sendEventReminder(String toEmail, List<String> guests) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("Reminder: Krina's Baby Shower is Tomorrow!");
-
         String guestList = (guests != null && !guests.isEmpty()) ? String.join(", ", guests) : "Just you!";
+        String subject = "Reminder: Krina's Baby Shower is Tomorrow!";
 
         String body = String.format(
                 "Hi there,\n\n" +
@@ -51,7 +61,37 @@ public class EmailService {
                 guestList
         );
 
-        message.setText(body);
-        mailSender.send(message); // 👈 This was missing before!
+        sendEmailViaBrevo(toEmail, subject, body);
+    }
+
+    // --- HELPER METHOD TO HANDLE THE API CALL ---
+    private void sendEmailViaBrevo(String toEmail, String subject, String textContent) {
+        try {
+            TransactionalEmailsApi apiInstance = new TransactionalEmailsApi();
+            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+
+            // Set who is sending it
+            SendSmtpEmailSender sender = new SendSmtpEmailSender();
+            sender.setEmail(senderEmail);
+            sender.setName("Krina's Baby Shower");
+            sendSmtpEmail.setSender(sender);
+
+            // Set who is receiving it
+            SendSmtpEmailTo to = new SendSmtpEmailTo();
+            to.setEmail(toEmail);
+            sendSmtpEmail.setTo(Collections.singletonList(to));
+
+            // Set content
+            sendSmtpEmail.setSubject(subject);
+            sendSmtpEmail.setTextContent(textContent); // We use TextContent to match your original formatting
+
+            // Send the email
+            apiInstance.sendTransacEmail(sendSmtpEmail);
+            System.out.println("✅ Email sent successfully via Brevo to: " + toEmail);
+
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send email via Brevo to " + toEmail + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
