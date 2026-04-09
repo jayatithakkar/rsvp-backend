@@ -60,6 +60,12 @@
             <version>7.0.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>1.9.23</version>
+        </dependency>
+
     </dependencies>
 
     <build>
